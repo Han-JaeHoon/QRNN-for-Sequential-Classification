@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch
 from torch.utils.data import DataLoader, TensorDataset, random_split
-
+import sys
     
 class data_seq():
     def __init__(self, feature_data, label_data):
@@ -59,14 +59,18 @@ class train_seq():  # NQE_train
         self.train_data = train_loader
         self.test_data = test_loader
     
-    def train(self, epochs, optimizer, criterion, seq_first = False):
+    def train(self, epochs, optimizer, criterion,metrics = [], seq_first = False):
         self.train_loss_list = []
         self.test_loss_list = []
+        for i in range(len(metrics)):
+          setattr(self,f'metric{i}_list',[])
+          setattr(self,f'metric{i}_test_list',[])
         for epoch in range(epochs):
             pred_list = []
             label_list = []
-            
+            setattr(self,f'metric{i}',[])
             for train,label in self.train_data:
+                config = {}
                 if seq_first:
                     train = train.permute(1, 0, 2)
                     label = label.permute(0, 1)
@@ -78,14 +82,33 @@ class train_seq():  # NQE_train
                 loss = criterion(pred, label)
                 loss.backward()
                 optimizer.step()
-            pred = torch.concat(pred_list)
-            label = torch.concat(label_list)
-            loss = criterion(pred,label)
+                config['loss'] = loss
+                for index,metric in enumerate(metrics):
+                  metric_result = metric(pred,label)
+                  getattr(self,f'metric{index}').append(metric_result)
+                  config[f'metric{index}'] = metric_result
+                self.call_message(config)
+            config = {}
+            print('\n')
             loss_test = self.test(criterion,seq_first)
             self.train_loss_list.append(loss.detach().item())
             self.test_loss_list.append(loss_test.detach().item())
-            print(f'epoch : {epoch+1} loss :{loss} loss_test = {loss_test}')
-            
+            config['train_loss'] = loss
+            config['test_loss'] = loss_test
+            for index,metric in enumerate(metrics):
+              metric_test = self.test(metric,seq_first)
+              metric_loss = getattr(self,f'metric{index}')[-1]
+              getattr(self,f'metric{index}_test_list').append(metric_loss)
+              config['train_metric'] = metric_loss
+              config['test_metric'] = metric_test
+            self.call_message(config)
+            print('\n')
+    def call_message(self,config):
+      meassage = '\r'
+      for key in config.keys():
+        meassage += f' {key} : {config[key]:.5f}'
+      sys.stdout.write(meassage)
+      
 
     def test(self, criterion, seq_first = False):
         pred_list = []

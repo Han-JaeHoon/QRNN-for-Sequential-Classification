@@ -63,12 +63,13 @@ class train_seq():  # NQE_train
         self.train_loss_list = []
         self.test_loss_list = []
         for i in range(len(metrics)):
+          setattr(self,f'metric{i}',[])
           setattr(self,f'metric{i}_list',[])
           setattr(self,f'metric{i}_test_list',[])
         for epoch in range(epochs):
             pred_list = []
             label_list = []
-            setattr(self,f'metric{i}',[])
+            
             for train,label in self.train_data:
                 config = {}
                 if seq_first:

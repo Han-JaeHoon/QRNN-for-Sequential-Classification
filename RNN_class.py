@@ -42,7 +42,7 @@ class RNN_layer(nn.Module):
         self.input_size = input_size
         self.output_size = output_size
         self.num_layer = num_layers
-        self.cls_layer = nn.Sequential(nn.Linear(4,16),nn.ReLU(),nn.Linear(16,1))
+        self.cls_layer = nn.Sequential(nn.Linear(input_size,16),nn.ReLU(),nn.Linear(16,1))
         ## QNE 수행할 Linear layer
         self.nqe_model = nQE_model
 
@@ -78,8 +78,6 @@ class RNN_layer(nn.Module):
             inputs (_torch tensor_): _(batch,seq_len,feature_size)_
         """
         if chk and self.chk:
-            print(inputs)
-            print(inputs.shape)
             self.chk = False
         
         batch = inputs.shape[0]

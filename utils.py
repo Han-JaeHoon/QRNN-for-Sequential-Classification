@@ -72,7 +72,7 @@ class my_utils:
             block.ansatz(weights1)
             block.embedding(inputs2)
             block.ansatz(weights2)
-            return [qml.expval(qml.PauliZ(i)) for i in range(4)]
+            return [qml.expval(qml.PauliZ(i)) for i in range(self.n_qu)]
         return inner_quantum_circuit(inputs1, inputs2, weights1, weights2)
 
     def quantum_layer(self, inputs1, inputs2, weights1, weights2):

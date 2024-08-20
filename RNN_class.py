@@ -42,7 +42,8 @@ class RNN_layer(nn.Module):
         self.input_size = input_size
         self.output_size = output_size
         self.num_layer = num_layers
-        self.cls_layer = nn.Sequential(nn.Linear(input_size,16),nn.ReLU(),nn.Linear(16,1))
+        self.cls_layer = nn.Sequential(nn.Linear(input_size,16), nn.ReLU(), nn.Linear(16,1))
+        self.classify_layer = nn.Sigmoid()
         ## QNE 수행할 Linear layer
         self.nqe_model = nQE_model
 
@@ -101,4 +102,5 @@ class RNN_layer(nn.Module):
         if return_hidden_list:
             hidden_list = torch.reshape(hidden_list,[batch,seq_len,-1])
             return hidden_list
-        return self.cls_layer(hidden)
+        result = self.cls_layer(hidden)
+        return self.classify_layer(result)

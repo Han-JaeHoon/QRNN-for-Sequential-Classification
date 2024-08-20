@@ -59,7 +59,7 @@ class train_seq():  # NQE_train
         self.train_data = train_loader
         self.test_data = test_loader
     
-    def train(self, epochs, optimizer, criterion,metrics = [], seq_first = False):
+    def train(self, epochs, optimizer, criterion, metrics = [], seq_first = False):
         self.train_loss_list = []
         self.test_loss_list = []
         for i in range(len(metrics)):
@@ -70,7 +70,7 @@ class train_seq():  # NQE_train
             pred_list = []
             label_list = []
             
-            for train,label in self.train_data:
+            for train, label in self.train_data:
                 config = {}
                 if seq_first:
                     train = train.permute(1, 0, 2)
@@ -78,6 +78,7 @@ class train_seq():  # NQE_train
                     
                 optimizer.zero_grad()
                 pred = self.model(train) ## Forward 사용
+                # print(pred, label)
                 pred_list.append(pred)
                 label_list.append(label)
                 loss = criterion(pred, label)

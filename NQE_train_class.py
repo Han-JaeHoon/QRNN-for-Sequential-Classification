@@ -19,7 +19,7 @@ class NQE_Train:
         self.optim = optim.Adam(self.nqe.parameters(), lr = 0.005)
         self.matrics = matrics
         
-    def train(self, epoch):
+    def train(self, epoch, seq_first = False):
         nqe_seq = train_seq(self.nqe, self.train_loader, self.test_loader)
-        nqe_seq.train(epoch, self.optim, self.loss, self.matrics, seq_first=True)
+        nqe_seq.train(epoch, self.optim, self.loss, self.matrics, seq_first=seq_first)
         return self.nqe

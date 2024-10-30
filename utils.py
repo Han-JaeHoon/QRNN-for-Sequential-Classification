@@ -38,6 +38,7 @@ class my_utils:
             qml.adjoint(self.embedding)(vec2, n_qu) # Phi^t(x2) 적용
             return qml.probs()
         return inner_fidelity(vec1, vec2, n_qu)
+
     def quantum_layer_Z(self, mapped_data1, mapped_data2, parameter1, parameter2, n_qu):
         @qml.qnode(self.dev, interface='torch')
         def inner_quantum_layer_Z(mapped_data1, mapped_data2, parameter1, parameter2, n_qu):

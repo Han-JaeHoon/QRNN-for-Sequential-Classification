@@ -10,7 +10,7 @@ class data_seq():
         self.feature = feature_data
         self.label = label_data
 
-    def nqe_data(self, dataset, rnn_sequence=0):
+    def nqe_data(self,dataset):
         X_new, Y_new = [], []
         size = len(dataset)
         for _ in range(size):
@@ -18,37 +18,22 @@ class data_seq():
             data_n, data_m = dataset[n], dataset[m]
             x_n, y_n = data_n[0], data_n[1]
             x_m, y_m = data_m[0], data_m[1]
-            # print('x_n :', x_n)
-            # print('y_n :', y_n)
             
             X_new.append(torch.stack([x_n, x_m], dim=0))
             Y_new.append(torch.tensor([y_n, y_m]))
-            # if rnn_sequence > 0:
-            #     Y_new.append(torch.stack([y_n, y_m], dim=0))
+            
+            # X_new.append([x_n, x_m])
+            # if y_n == y_m:
+            #     Y_new.append(1)
             # else:
-            #     Y_new.append(torch.tensor([y_n, y_m]))
- 
+            #     Y_new.append(0)
         X_new = torch.stack(X_new, dim=0).to(torch.float32)
         # Y_new = torch.tensor(Y_new).to(torch.float32)
         Y_new = torch.stack(Y_new, dim=0).to(torch.float32)
 
         return TensorDataset(X_new, Y_new)
-    
-    def zip_for_sequence(self, dataset, n_sequence):
-        X_new, Y_new = [], []
-        size = len(dataset) - n_sequence
-        for i in range(size):
-            data_i = dataset[i:i+n_sequence]
-            x_i = data_i[0]
-            y_i = data_i[1][-1]
-            X_new.append(x_i)
-            Y_new.append(y_i)
-        X_new = torch.stack(X_new, dim=0).to(torch.float32)
-        Y_new = torch.stack(Y_new, dim=0).to(torch.float32)
-        return TensorDataset(X_new, Y_new)
 
-
-    def split_data(self, test_ratio = 0.2, batch_size = 32, seq_first = False, for_nqe = False, n_sequence = 0, seed = 40):
+    def split_data(self, test_ratio = 0.2, batch_size = 32, seq_first = False, for_nqe = False, seed = 40):
         """
         데이터를 훈련 및 테스트 세트로 나누고 배치 단위로 나누어 줍니다.
 
@@ -66,35 +51,20 @@ class data_seq():
             self.feature = self.feature.permute(1, 0, 2)
             self.label = self.label.permute(1, 0)
 
-        original_size = len(self.feature)
-        temp_feature = self.feature[0:int(batch_size * (original_size // batch_size))]
-        temp_label = self.label[0:int(batch_size * (original_size // batch_size))]
-        # print(len(self.feature))
-        # print(len(temp_feature))
-
         # 데이터셋 생성
-        dataset = TensorDataset(temp_feature, temp_label)
-        # print(len(dataset))
+        dataset = TensorDataset(self.feature, self.label)
 
         # 훈련 및 테스트 데이터셋 크기 계산
-        test_size = int(((int(len(dataset) * test_ratio)) // batch_size) * batch_size)
+        test_size = int(len(dataset) * test_ratio)
         train_size = len(dataset) - test_size
-
-        if n_sequence > 1:
-            dataset = self.zip_for_sequence(dataset, n_sequence=n_sequence)
-            test_size = int(((int(len(dataset) * test_ratio)) // batch_size) * batch_size)
-            train_size = len(dataset) - test_size
-        print('dataset length :', len(dataset))
-        print('test_size :', test_size)
-        print('train_size :', train_size)
 
         # 데이터셋 분할
         torch.manual_seed(seed)
         train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
         
         if for_nqe:
-           train_dataset = self.nqe_data(train_dataset, n_sequence)
-           test_dataset  = self.nqe_data(test_dataset, n_sequence)
+           train_dataset = self.nqe_data(train_dataset)
+           test_dataset  = self.nqe_data(test_dataset)
 
         # 데이터 로더 생성
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -123,28 +93,19 @@ class train_seq():  # NQE_train
           setattr(self, f'metric{i}',[])
           setattr(self, f'metric{i}_list',[])
           setattr(self, f'metric{i}_test_list',[])
-        
         for epoch in range(epochs):
-            print("=" * 5 + "Epoch :", epoch + 1, "=" * 5)
             pred_list = []
             label_list = []
             
             for train, label in self.train_data:
                 config = {}
                 if seq_first:
-                    # print('train :', train.shape)
-                    # print('label :', label.shape)
-                    # train = train.permute(1, 0, 2)
-                    train = train.transpose(1, 0)
+                    train = train.permute(1, 0, 2)
                     label = label.permute(0, 1)
-                    # label = label.transpose(1, 0)
                     
                 optimizer.zero_grad()
                 pred = self.model(train) ## Forward 사용
-                # print('pred :', pred)
                 # print(pred, label)
-                # print('pred shape :', pred.shape)
-                # print('label :', label.shape)
                 pred_list.append(pred)
                 label_list.append(label)
                 loss = criterion(pred, label)
@@ -171,22 +132,20 @@ class train_seq():  # NQE_train
               config['test_metric'] = metric_test
             self.call_message(config)
             print('\n')
-
     def call_message(self,config):
       meassage = '\r'
       for key in config.keys():
         meassage += f' {key} : {config[key]:.5f}'
       sys.stdout.write(meassage)
+      
 
     def test(self, criterion, seq_first = False):
         pred_list = []
         label_list = []
         for test, label in self.test_data:
             if seq_first:
-                # test = test.permute(1,0,2)
-                label = label.permute(0, 1)
-                test = test.transpose(1, 0)
-                # label = label.transpose(1, 0)
+                test = test.permute(1,0,2)
+                label = label.permute(0,1)
             pred = self.model(test)
             pred_list.append(pred)
             label_list.append(label)
@@ -194,3 +153,6 @@ class train_seq():  # NQE_train
         label = torch.concat(label_list)
         loss = criterion(pred, label)
         return loss
+    
+
+# class NQE_train()
